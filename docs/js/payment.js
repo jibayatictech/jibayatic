@@ -1,8 +1,10 @@
 
 const CONFIG = {
-    CHARGILY_API_KEY: 'test_pk_ASbs0koLC5Ar5Mbl0feG9gX3GwONGbwhBBWQVtd7',  // ← استبدل بمفتاح Chargily الحقيقي
-    CHARGILY_API_URL: 'https://pay.chargily.net/test/api/v2',  // للاختبار. للإنتاج: https://pay.chargily.net/api/v2
+    CHARGILY_API_KEY: 'test_pk_ASbs0koLC5Ar5Mbl0feG9gX3GwONGbwhBBWQVtd7',  // للإشارة فقط - لا يُستخدم لإنشاء الفاتورة
+    CHARGILY_API_URL: 'https://pay.chargily.net/test/api/v2',
     SUPABASE_ANON_KEY: 'sb_publishable_58oRALrpYMsE7AJoVL9GBg_q5wtqytv',
+    // ✅ الآن تمر كل طلبات الدفع عبر السيرفر الآمن
+    CREATE_CHECKOUT_URL: 'https://jtjrncwyeasptvtrihep.supabase.co/functions/v1/create-checkout',
 
     // روابط Redirect بعد الدفع
     SUCCESS_URL: 'https://jibayatictech.github.io/jibayatic/welcome',
@@ -44,53 +46,31 @@ async function handlePayment() {
         return;
     }
 
-    // إذا كان تجريبياً مجاناً، يتم الإرسال مباشرة للـ Webhook
-    if (price === 0) {
-        await handleTrialActivation(email);
-        return;
-    }
-
     // إخفاء الخطأ وإظهار التحميل
     hideError();
     setLoading(true);
 
     try {
-        // إنشاء Checkout Session عبر Chargily API
-        const response = await fetch(`${CONFIG.CHARGILY_API_URL}/checkouts`, {
+        // ✅ الآن نتصل بالسيرفر الآمن الخاص بنا بدلاً من Chargily مباشرةً
+        // المفتاح السري محمي بالكامل في Supabase Secrets
+        const response = await fetch(CONFIG.CREATE_CHECKOUT_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${CONFIG.CHARGILY_API_KEY}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
             },
-            body: JSON.stringify({
-                amount: price,
-                currency: 'dzd',
-                description: `Jibayatic ${licenseType === 'annual' ? 'سنوي' : licenseType}`,
-                success_url: CONFIG.SUCCESS_URL,
-                failure_url: CONFIG.FAILURE_URL,
-                webhook_endpoint: CONFIG.WEBHOOK_URL,
-                customer: {
-                    name: email.split('@')[0],
-                    email: email
-                },
-                metadata: {
-                    customer_email: email,
-                    license_type: licenseType === 'annual' ? 'standard' : licenseType,
-                    source: 'github_pages'
-                }
-            })
+            body: JSON.stringify({ email, licenseType })
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.message || `HTTP Error: ${response.status}`);
+            throw new Error(data.error || `خطأ من السيرفر: ${response.status}`);
         }
 
-        const checkout = await response.json();
-
-        if (checkout.checkout_url) {
+        if (data.checkout_url) {
             // توجيه العميل لصفحة الدفع
-            window.location.href = checkout.checkout_url;
+            window.location.href = data.checkout_url;
         } else {
             throw new Error('لم يتم إرسال رابط الدفع');
         }
@@ -101,6 +81,7 @@ async function handlePayment() {
         setLoading(false);
     }
 }
+
 
 // تفعيل النسخة التجريبية مجاناً
 async function handleTrialActivation(email) {
