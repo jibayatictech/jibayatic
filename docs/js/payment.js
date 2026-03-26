@@ -5,8 +5,8 @@ const CONFIG = {
     SUPABASE_ANON_KEY: 'sb_publishable_58oRALrpYMsE7AJoVL9GBg_q5wtqytv',
 
     // روابط Redirect بعد الدفع
-    SUCCESS_URL: 'https://YOUR_GITHUB_PAGES.github.io/jibayatic/welcome',
-    FAILURE_URL: 'https://YOUR_GITHUB_PAGES.github.io/jibayatic/?error=payment_failed',
+    SUCCESS_URL: 'https://jibayatictech.github.io/jibayatic/welcome',
+    FAILURE_URL: 'https://jibayatictech.github.io/jibayatic/?error=payment_failed',
     WEBHOOK_URL: 'https://jtjrncwyeasptvtrihep.supabase.co/functions/v1/chargily-webhook',
 
     PRICES: {
