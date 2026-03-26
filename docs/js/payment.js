@@ -69,6 +69,8 @@ async function handlePayment() {
         }
 
         if (data.checkout_url) {
+            // تسجيل بأن المشتري ذهب للدفع
+            localStorage.setItem('pending_checkout', 'true');
             // توجيه العميل لصفحة الدفع
             window.location.href = data.checkout_url;
         } else {
@@ -134,6 +136,8 @@ function showError(msg) {
     const alert = document.getElementById('error-alert');
     alert.textContent = msg;
     alert.classList.add('show');
+    // التمرير التلقائي لرؤية رسالة الخطأ
+    alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => alert.classList.remove('show'), 6000);
 }
 
@@ -144,10 +148,17 @@ function hideError() {
 // التحقق من معلمة الـ URL عند العودة من الدفع
 window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
+
     if (params.get('error') === 'payment_failed') {
+        localStorage.removeItem('pending_checkout');
         showError('❌ فشلت عملية الدفع. حاول مجدداً أو تواصل معنا.');
-    }
-    if (params.get('success') === 'true') {
-        showSuccessPage();
+    } else if (params.get('success') === 'true') {
+        // ✅ دفع ناجح → مسح العلامة وتوجيه المشتري لصفحة التحميل
+        localStorage.removeItem('pending_checkout');
+        window.location.replace('welcome.html');
+    } else if (localStorage.getItem('pending_checkout') === 'true') {
+        // المشتري عاد للصفحة بدون إتمام الدفع
+        localStorage.removeItem('pending_checkout');
+        showError('⚠️ يبدو أن عملية الدفع لم تكتمل أو تم إلغاؤها من طرفك.');
     }
 });
